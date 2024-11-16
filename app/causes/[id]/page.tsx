@@ -26,10 +26,7 @@ export default function CausePage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <CauseDetails cause={cause} />
-      <div className="mt-8">
-        <h2 className="text-2xl font-semibold mb-6 max-w-6xl mx-auto">
-          Comments
-        </h2>
+      <div className="my-8">
         <Comments causeId={params.id as string} />
       </div>
     </div>

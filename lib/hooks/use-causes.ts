@@ -9,8 +9,8 @@ export function useCauses(page: number = 1, limit: number = 9) {
       if (!response.ok) throw new Error("Failed to fetch causes");
       return response.json();
     },
-    staleTime: 1000 * 60 * 5, // Data considered fresh for 5 minutes
-    gcTime: 1000 * 60 * 30, // Cache data for 30 minutes
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
   });
 }
 
@@ -23,7 +23,7 @@ export function useCause(id: string) {
       return response.json();
     },
     enabled: !!id,
-    staleTime: 1000 * 60 * 5, // Data considered fresh for 5 minutes
-    gcTime: 1000 * 60 * 30, // Cache data for 30 minutes
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
   });
 }

@@ -55,18 +55,23 @@ export function WalletConnect() {
       <div className="flex gap-2 items-center">
         {chain?.id !== taikoHekla.id && (
           <Button
+            size="sm"
             variant="destructive"
             onClick={() => switchChain({ chainId: taikoHekla.id })}
           >
             Switch to Taiko
           </Button>
         )}
-        <Button variant="outline" onClick={() => disconnect()}>
+        <Button size="sm" variant="outline" onClick={() => disconnect()}>
           {address.slice(0, 6)}...{address.slice(-4)}
         </Button>
       </div>
     );
   }
 
-  return <Button onClick={handleConnect}>Connect Wallet</Button>;
+  return (
+    <Button size="sm" onClick={handleConnect}>
+      Connect Wallet
+    </Button>
+  );
 }

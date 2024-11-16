@@ -9,12 +9,13 @@ export async function GET(
   const params = await props.params;
   const { searchParams } = new URL(request.url);
   const cursor = searchParams.get("cursor");
+  const sortBy = searchParams.get("sortBy") || "recent";
   const limit = 20;
 
   try {
     const causeIdBuffer = Buffer.from(params.id, "hex");
 
-    // Fetch top-level comments first
+    // Fetch top-level comments first with dynamic sorting
     const comments = await prisma.taiko_hekla_testnet_comment.findMany({
       where: {
         cause_id: causeIdBuffer,
@@ -30,7 +31,10 @@ export async function GET(
           }
         : {}),
       orderBy: {
-        block_timestamp: "desc",
+        // Dynamic sorting based on sortBy parameter
+        ...(sortBy === "likes"
+          ? { likes_count: "desc" }
+          : { block_timestamp: "desc" }),
       },
     });
 
@@ -127,6 +131,100 @@ export async function POST(
     console.error("Error creating comment:", error);
     return NextResponse.json(
       { error: "Failed to create comment" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const commentId = searchParams.get("commentId");
+    const author = searchParams.get("author");
+
+    if (!commentId || !author) {
+      return NextResponse.json(
+        { error: "Missing commentId or author" },
+        { status: 400 }
+      );
+    }
+
+    const commentIdBuffer = Buffer.from(commentId, "hex");
+    const authorBuffer = Buffer.from(author.replace("0x", ""), "hex");
+
+    // First verify the author owns the comment
+    const comment = await prisma.taiko_hekla_testnet_comment.findFirst({
+      where: {
+        id: commentIdBuffer,
+        author: authorBuffer,
+      },
+    });
+
+    if (!comment) {
+      return NextResponse.json(
+        { error: "Comment not found or unauthorized" },
+        { status: 403 }
+      );
+    }
+
+    // Delete the comment and all its replies
+    await prisma.$transaction([
+      // Delete replies first
+      prisma.taiko_hekla_testnet_comment.deleteMany({
+        where: {
+          parent_id: commentIdBuffer,
+        },
+      }),
+      // Then delete the main comment
+      prisma.taiko_hekla_testnet_comment.delete({
+        where: {
+          id: commentIdBuffer,
+        },
+      }),
+    ]);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting comment:", error);
+    return NextResponse.json(
+      { error: "Failed to delete comment" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { commentId, action } = body;
+
+    if (!commentId || !action) {
+      return NextResponse.json(
+        { error: "Missing commentId or action" },
+        { status: 400 }
+      );
+    }
+
+    const commentIdBuffer = Buffer.from(commentId, "hex");
+
+    if (action === "like") {
+      await prisma.taiko_hekla_testnet_comment.update({
+        where: {
+          id: commentIdBuffer,
+        },
+        data: {
+          likes_count: {
+            increment: 1,
+          },
+        },
+      });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error updating comment:", error);
+    return NextResponse.json(
+      { error: "Failed to update comment" },
       { status: 500 }
     );
   }

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { Avatar, AvatarFallback } from "./ui/avatar";
-import { Heart } from "lucide-react";
+import { Heart, Trash2 } from "lucide-react";
 import dayjs from "dayjs";
 import {
   useInfiniteQuery,
@@ -14,19 +14,37 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CommentsResponse, Comment } from "@/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
 
 export function Comments({ causeId }: { causeId: string }) {
   const { address } = useAccount();
   const queryClient = useQueryClient();
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [content, setContent] = useState("");
+  const [sortBy, setSortBy] = useState<"recent" | "likes">("recent");
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteQuery<CommentsResponse>({
-      queryKey: ["comments", causeId],
+      queryKey: ["comments", causeId, sortBy],
       queryFn: async ({ pageParam }) => {
         const response = await fetch(
-          `/api/causes/${causeId}/comments?cursor=${pageParam || ""}`
+          `/api/causes/${causeId}/comments?cursor=${
+            pageParam || ""
+          }&sortBy=${sortBy}`
         );
         if (!response.ok) {
           throw new Error("Failed to fetch comments");
@@ -70,6 +88,51 @@ export function Comments({ causeId }: { causeId: string }) {
     },
   });
 
+  const deleteComment = useMutation({
+    mutationFn: async (commentId: string) => {
+      const response = await fetch(
+        `/api/causes/${causeId}/comments?commentId=${commentId}&author=${address}`,
+        {
+          method: "DELETE",
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Failed to delete comment");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["comments", causeId] });
+      toast.success("Comment deleted successfully!");
+    },
+    onError: () => {
+      toast.error("Failed to delete comment");
+    },
+  });
+
+  const likeComment = useMutation({
+    mutationFn: async (commentId: string) => {
+      const response = await fetch(`/api/causes/${causeId}/comments`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          commentId,
+          action: "like",
+        }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to like comment");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["comments", causeId] });
+    },
+    onError: () => {
+      toast.error("Failed to like comment");
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
@@ -80,6 +143,22 @@ export function Comments({ causeId }: { causeId: string }) {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold">Comments</h2>
+        <Select
+          value={sortBy}
+          onValueChange={(value) => setSortBy(value as "recent" | "likes")}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="recent">Most Recent</SelectItem>
+            <SelectItem value="likes">Most Liked</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <Textarea
           placeholder="Write a comment..."
@@ -112,6 +191,9 @@ export function Comments({ causeId }: { causeId: string }) {
             key={comment.id}
             comment={comment}
             onReply={() => setReplyTo(comment.id)}
+            onDelete={() => deleteComment.mutate(comment.id)}
+            onLike={() => likeComment.mutate(comment.id)}
+            currentUser={address}
           />
         ))}
       </div>
@@ -133,10 +215,25 @@ export function Comments({ causeId }: { causeId: string }) {
 function CommentItem({
   comment,
   onReply,
+  onDelete,
+  onLike,
+  currentUser,
 }: {
   comment: Comment;
   onReply: () => void;
+  onDelete: () => void;
+  onLike: () => void;
+  currentUser?: string;
 }) {
+  const isAuthor =
+    currentUser?.toLowerCase() === `0x${comment.author.toLowerCase()}`;
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const handleDelete = () => {
+    onDelete();
+    setShowDeleteDialog(false);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex space-x-4">
@@ -155,10 +252,27 @@ function CommentItem({
                 {dayjs.unix(comment.timestamp).fromNow()}
               </span>
             </div>
-            <Button variant="ghost" size="sm" className="space-x-1">
-              <Heart className="h-4 w-4" />
-              <span>{comment.likesCount}</span>
-            </Button>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="space-x-1"
+                onClick={onLike}
+              >
+                <Heart className="h-4 w-4" />
+                <span>{comment.likesCount}</span>
+              </Button>
+              {isAuthor && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="text-red-500 hover:text-red-600"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
           <p className="text-sm">{comment.content}</p>
           <Button variant="ghost" size="sm" onClick={onReply}>
@@ -166,6 +280,26 @@ function CommentItem({
           </Button>
         </div>
       </div>
+
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Comment</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this comment? This action cannot
+              be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex space-x-2 justify-end">
+            <Button variant="ghost" onClick={() => setShowDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {comment.replies && comment.replies.length > 0 && (
         <div className="ml-12 space-y-4">

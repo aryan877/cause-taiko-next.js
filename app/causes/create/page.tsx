@@ -11,6 +11,8 @@ import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { contractConfig } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { useAccount, useContractRead } from "wagmi";
+import { redirect } from "next/navigation";
 
 export default function CreateCausePage() {
   const router = useRouter();
@@ -23,6 +25,25 @@ export default function CreateCausePage() {
   const { isLoading: isConfirming } = useWaitForTransactionReceipt({
     hash,
   });
+
+  const { address } = useAccount();
+
+  const { data: contractOwner } = useContractRead({
+    ...contractConfig,
+    functionName: "owner",
+  });
+
+  const isContractOwner =
+    address &&
+    contractOwner &&
+    typeof address === "string" &&
+    typeof contractOwner === "string" &&
+    address.toLowerCase() === contractOwner.toLowerCase();
+
+  // Redirect if not contract owner
+  if (!isContractOwner) {
+    redirect("/");
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -47,6 +47,7 @@ export async function GET(request: Request) {
               donor: true,
               block_timestamp: true,
               impact_score: true,
+              transaction_hash: true,
             },
           });
 
@@ -68,6 +69,7 @@ export async function GET(request: Request) {
             causeId: cause.cause_id.toString("hex"),
             causeName: cause.cause_name,
             impactScore: d.impact_score.toString(),
+            transactionHash: d.transaction_hash.toString("hex"),
           })),
           withdrawals: [],
           milestones: [],

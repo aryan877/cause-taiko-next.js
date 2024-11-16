@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
 
-// Base Types
 export interface Donation {
   id: string;
   amount: string;
@@ -9,6 +8,7 @@ export interface Donation {
   causeId: string;
   causeName: string;
   impactScore: string;
+  transactionHash: string;
 }
 
 export interface Withdrawal {
@@ -17,13 +17,19 @@ export interface Withdrawal {
   timestamp: number;
   causeId: string;
   beneficiary: string;
+  transactionHash: string;
 }
 
 export interface Milestone {
   id: string;
   causeId: string;
+  description: string;
+  targetAmount: string;
+  isCompleted: boolean;
+  completionTime: number | null;
+  createdAt: number;
+  transactionHash: string;
   index: string;
-  completionTime: number;
 }
 
 export interface Cause {
@@ -39,6 +45,10 @@ export interface Cause {
   donations: Donation[];
   withdrawals: Withdrawal[];
   milestones: Milestone[];
+  topDonors?: TopDonor[];
+  totalDonated?: string;
+  totalWithdrawn?: string;
+  remainingAmount?: string;
 }
 
 // API Response Types
@@ -125,4 +135,32 @@ export interface Comment {
 export interface CommentsResponse {
   items: Comment[];
   nextCursor: string | null;
+}
+
+export interface TopDonor {
+  address: string;
+  totalDonated: string;
+  donationCount: number;
+}
+
+export interface UserProfile {
+  address: string;
+  totalDonated: string;
+  donationCount: number;
+  causesSupported: number;
+  impactScore: string;
+  badges: {
+    type: string;
+    earnedAt: number;
+    transactionHash: string;
+  }[];
+  donations: {
+    id: string;
+    amount: string;
+    causeId: string;
+    causeName: string;
+    timestamp: number;
+    transactionHash: string;
+    impactScore: string;
+  }[];
 }
