@@ -1,0 +1,212 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model taiko_hekla_testnet_approval {
+  vid              BigInt
+  block            Int
+  id               Bytes
+  owner            Bytes
+  approved         Bytes
+  token_id         Decimal @db.Decimal
+  block_number     Decimal @db.Decimal
+  block_timestamp  Decimal @db.Decimal
+  transaction_hash Bytes
+  gs_chain         String  @map("_gs_chain")
+  gs_gid           String  @id @map("_gs_gid")
+}
+
+model taiko_hekla_testnet_approval_for_all {
+  vid              BigInt
+  block            Int
+  id               Bytes
+  owner            Bytes
+  operator         Bytes
+  approved         Boolean
+  block_number     Decimal @db.Decimal
+  block_timestamp  Decimal @db.Decimal
+  transaction_hash Bytes
+  gs_chain         String  @map("_gs_chain")
+  gs_gid           String  @id @map("_gs_gid")
+}
+
+model taiko_hekla_testnet_badge_earned {
+  vid              BigInt
+  block            Int
+  id               Bytes
+  donor            Bytes
+  badge_type       String
+  token_id         Decimal @db.Decimal
+  block_number     Decimal @db.Decimal
+  block_timestamp  Decimal @db.Decimal
+  transaction_hash Bytes
+  gs_chain         String  @map("_gs_chain")
+  gs_gid           String  @id @map("_gs_gid")
+}
+
+model taiko_hekla_testnet_cause_created {
+  vid              BigInt
+  block            Int
+  id               Bytes
+  cause_id         Bytes
+  cause_name       String
+  description      String
+  beneficiary      Bytes
+  target_amount    Decimal @db.Decimal
+  block_number     Decimal @db.Decimal
+  block_timestamp  Decimal @db.Decimal
+  transaction_hash Bytes
+  gs_chain         String  @map("_gs_chain")
+  gs_gid           String  @id @map("_gs_gid")
+}
+
+model taiko_hekla_testnet_cause_target_reached {
+  vid              BigInt
+  block            Int
+  id               Bytes
+  cause_id         Bytes
+  cause_name       String
+  final_amount     Decimal @db.Decimal
+  donor_count      Decimal @db.Decimal
+  block_number     Decimal @db.Decimal
+  block_timestamp  Decimal @db.Decimal
+  transaction_hash Bytes
+  gs_chain         String  @map("_gs_chain")
+  gs_gid           String  @id @map("_gs_gid")
+}
+
+model taiko_hekla_testnet_donation_received {
+  vid              BigInt
+  block            Int
+  id               Bytes
+  donor            Bytes
+  cause_id         Bytes
+  cause_name       String
+  amount           Decimal @db.Decimal
+  impact_score     Decimal @db.Decimal
+  timestamp        Decimal @db.Decimal
+  block_number     Decimal @db.Decimal
+  block_timestamp  Decimal @db.Decimal
+  transaction_hash Bytes
+  gs_chain         String  @map("_gs_chain")
+  gs_gid           String  @id @map("_gs_gid")
+}
+
+model taiko_hekla_testnet_funds_withdrawn {
+  vid              BigInt
+  block            Int
+  id               Bytes
+  cause_id         Bytes
+  cause_name       String
+  beneficiary      Bytes
+  amount           Decimal @db.Decimal
+  block_number     Decimal @db.Decimal
+  block_timestamp  Decimal @db.Decimal
+  transaction_hash Bytes
+  gs_chain         String  @map("_gs_chain")
+  gs_gid           String  @id @map("_gs_gid")
+}
+
+model taiko_hekla_testnet_impact_score_updated {
+  vid              BigInt
+  block            Int
+  id               Bytes
+  donor            Bytes
+  new_score        Decimal @db.Decimal
+  cause_id         Bytes
+  cause_name       String
+  block_number     Decimal @db.Decimal
+  block_timestamp  Decimal @db.Decimal
+  transaction_hash Bytes
+  gs_chain         String  @map("_gs_chain")
+  gs_gid           String  @id @map("_gs_gid")
+}
+
+model taiko_hekla_testnet_milestone_added {
+  vid              BigInt
+  block            Int
+  id               Bytes
+  cause_id         Bytes
+  cause_name       String
+  description      String
+  target_amount    Decimal @db.Decimal
+  block_number     Decimal @db.Decimal
+  block_timestamp  Decimal @db.Decimal
+  transaction_hash Bytes
+  gs_chain         String  @map("_gs_chain")
+  gs_gid           String  @id @map("_gs_gid")
+}
+
+model taiko_hekla_testnet_milestone_completed {
+  vid              BigInt
+  block            Int
+  id               Bytes
+  cause_id         Bytes
+  cause_name       String
+  milestone_index  Decimal @db.Decimal
+  completion_time  Decimal @db.Decimal
+  block_number     Decimal @db.Decimal
+  block_timestamp  Decimal @db.Decimal
+  transaction_hash Bytes
+  gs_chain         String  @map("_gs_chain")
+  gs_gid           String  @id @map("_gs_gid")
+}
+
+model taiko_hekla_testnet_ownership_transferred {
+  vid              BigInt
+  block            Int
+  id               Bytes
+  previous_owner   Bytes
+  new_owner        Bytes
+  block_number     Decimal @db.Decimal
+  block_timestamp  Decimal @db.Decimal
+  transaction_hash Bytes
+  gs_chain         String  @map("_gs_chain")
+  gs_gid           String  @id @map("_gs_gid")
+}
+
+model taiko_hekla_testnet_transfer {
+  vid              BigInt
+  block            Int
+  id               Bytes
+  from             Bytes
+  to               Bytes
+  token_id         Decimal @db.Decimal
+  block_number     Decimal @db.Decimal
+  block_timestamp  Decimal @db.Decimal
+  transaction_hash Bytes
+  gs_chain         String  @map("_gs_chain")
+  gs_gid           String  @id @map("_gs_gid")
+}
+
+model taiko_hekla_testnet_comment {
+  vid              BigInt
+  block            Int
+  id               Bytes    @id
+  cause_id         Bytes
+  author           Bytes
+  content          String
+  parent_id        Bytes?   // null for top-level comments
+  likes_count      Int      @default(0)
+  block_timestamp  Decimal  @db.Decimal
+  transaction_hash Bytes
+  gs_chain         String   @map("_gs_chain")
+  gs_gid           String   @map("_gs_gid")
+}
+
+model taiko_hekla_testnet_comment_like {
+  vid              BigInt
+  block            Int
+  id               Bytes    @id
+  comment_id       Bytes
+  liker            Bytes
+  block_timestamp  Decimal  @db.Decimal
+  transaction_hash Bytes
+  gs_chain         String   @map("_gs_chain")
+  gs_gid           String   @map("_gs_gid")
+}
