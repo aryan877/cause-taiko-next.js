@@ -1,37 +1,33 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { PaginatedCauses } from "@/types";
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const page = parseInt(searchParams.get("page") || "1");
   const limit = parseInt(searchParams.get("limit") || "9");
   const search = searchParams.get("search") || "";
+  const featuredOnly = searchParams.get("featured") === "true";
   const skip = (page - 1) * limit;
 
   try {
+    const where: Prisma.taiko_hekla_testnet_cause_createdWhereInput = {
+      cause_name: {
+        contains: search,
+        mode: "insensitive" as Prisma.QueryMode,
+      },
+      ...(featuredOnly ? { is_featured: true } : {}),
+    };
+
     const [causes, total] = await Promise.all([
       prisma.taiko_hekla_testnet_cause_created.findMany({
-        where: {
-          cause_name: {
-            contains: search,
-            mode: "insensitive",
-          },
-        },
+        where,
         skip,
         take: limit,
-        orderBy: {
-          block_timestamp: "desc",
-        },
+        orderBy: [{ is_featured: "desc" }, { block_timestamp: "desc" }],
       }),
-      prisma.taiko_hekla_testnet_cause_created.count({
-        where: {
-          cause_name: {
-            contains: search,
-            mode: "insensitive",
-          },
-        },
-      }),
+      prisma.taiko_hekla_testnet_cause_created.count({ where }),
     ]);
 
     const causesWithDonations = await Promise.all(
@@ -73,6 +69,7 @@ export async function GET(request: Request) {
           })),
           withdrawals: [],
           milestones: [],
+          isFeatured: cause.is_featured,
         };
       })
     );

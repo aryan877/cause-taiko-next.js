@@ -8,11 +8,12 @@ import { Button } from "@/components/ui/button";
 import RichTextEditor from "@/components/rich-text-editor";
 import { parseEther } from "viem";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { contractConfig } from "@/lib/utils";
+import { contractConfig, config } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useAccount, useContractRead } from "wagmi";
 import { redirect } from "next/navigation";
+import { waitForTransactionReceipt } from "@wagmi/core";
 
 export default function CreateCausePage() {
   const router = useRouter();
@@ -21,12 +22,66 @@ export default function CreateCausePage() {
   const [beneficiary, setBeneficiary] = useState("");
   const [targetAmount, setTargetAmount] = useState("");
 
-  const { writeContract, data: hash, isPending } = useWriteContract();
-  const { isLoading: isConfirming } = useWaitForTransactionReceipt({
-    hash,
+  const { writeContract } = useWriteContract({
+    mutation: {
+      onMutate: () => {
+        return toast.loading("Initiating cause creation...");
+      },
+      onSuccess: async (hash, _, toastId) => {
+        const explorerUrl = `https://hekla.taikoscan.io/tx/${hash}`;
+        toast.loading(
+          <div className="flex flex-col gap-2">
+            <p>Waiting for confirmation...</p>
+            <a
+              href={explorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-blue-500 hover:text-blue-600 underline"
+            >
+              View on Explorer
+            </a>
+          </div>,
+          { id: toastId }
+        );
+
+        try {
+          await waitForTransactionReceipt(config, {
+            hash,
+            confirmations: 1,
+          });
+
+          toast.success(
+            <div className="flex flex-col gap-2">
+              <p>Cause created successfully!</p>
+              <a
+                href={explorerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-blue-500 hover:text-blue-600 underline"
+              >
+                View on Explorer
+              </a>
+            </div>,
+            { id: toastId }
+          );
+
+          setTimeout(() => {
+            router.push("/");
+          }, 2000);
+        } catch (error) {
+          toast.error("Failed to create cause", { id: toastId });
+        }
+      },
+      onError: (error, _, toastId) => {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to create cause",
+          { id: toastId }
+        );
+      },
+    },
   });
 
-  const { address } = useAccount();
+  const { address, isConnected } = useAccount();
 
   const { data: contractOwner } = useContractRead({
     ...contractConfig,
@@ -64,18 +119,13 @@ export default function CreateCausePage() {
         functionName: "createCause",
         args: [name, description, beneficiary, parseEther(targetAmount)],
       });
-
-      toast.success("Cause created successfully!");
-      router.push("/causes");
     } catch (error) {
       console.error("Error creating cause:", error);
-      const message =
-        error instanceof Error ? error.message : "Error creating cause";
-      toast.error(message);
+      toast.error(
+        error instanceof Error ? error.message : "Error creating cause"
+      );
     }
   };
-
-  const isLoading = isPending || isConfirming;
 
   return (
     <div className="container mx-auto py-8 max-w-3xl">
@@ -97,11 +147,7 @@ export default function CreateCausePage() {
 
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
-              <RichTextEditor
-                value={description}
-                onChange={setDescription}
-                disabled={isLoading}
-              />
+              <RichTextEditor value={description} onChange={setDescription} />
             </div>
 
             <div className="space-y-2">
@@ -127,12 +173,8 @@ export default function CreateCausePage() {
               />
             </div>
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isLoading || !writeContract}
-            >
-              {isLoading ? "Creating..." : "Create Cause"}
+            <Button type="submit" className="w-full" disabled={!isConnected}>
+              {isConnected ? "Create Cause" : "Wallet not connected"}
             </Button>
           </form>
         </CardContent>

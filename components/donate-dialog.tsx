@@ -14,14 +14,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { parseEther } from "viem";
-import {
-  useWriteContract,
-  useWatchContractEvent,
-  useWaitForTransactionReceipt,
-} from "wagmi";
+import { useWriteContract } from "wagmi";
 import { contractConfig } from "@/lib/utils";
 import { toast } from "sonner";
 import { Cause } from "@/types";
+import { waitForTransactionReceipt } from "@wagmi/core";
+import { config } from "@/lib/utils";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAccount } from "wagmi";
 
 interface DonateCauseDialogProps {
   cause: Cause;
@@ -31,23 +31,69 @@ interface DonateCauseDialogProps {
 export function DonateCauseDialog({ cause, children }: DonateCauseDialogProps) {
   const [amount, setAmount] = useState("");
   const [open, setOpen] = useState(false);
-  const { writeContract, data: hash, isPending } = useWriteContract();
+  const queryClient = useQueryClient();
+  const { isConnected } = useAccount();
 
-  const { isLoading: isConfirming } = useWaitForTransactionReceipt({
-    hash,
-  });
+  const { writeContract } = useWriteContract({
+    mutation: {
+      onMutate: () => {
+        return toast.loading("Initiating donation...");
+      },
+      onSuccess: async (hash, _, toastId) => {
+        const explorerUrl = `https://hekla.taikoscan.io/tx/${hash}`;
+        toast.loading(
+          <div className="flex flex-col gap-2">
+            <p>Waiting for confirmation...</p>
+            <a
+              href={explorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-blue-500 hover:text-blue-600 underline"
+            >
+              View on Explorer
+            </a>
+          </div>,
+          { id: toastId }
+        );
 
-  // Only watch for badge events
-  useWatchContractEvent({
-    ...contractConfig,
-    eventName: "BadgeEarned",
-    onLogs(logs) {
-      if (!hash) return;
-      const matchingLog = logs.find((log) => log.transactionHash === hash);
-      if (matchingLog && "args" in matchingLog) {
-        const [, badgeType] = matchingLog.args as [string, string];
-        toast.success(`Congratulations! You earned a ${badgeType} badge! 🏆`);
-      }
+        try {
+          await waitForTransactionReceipt(config, {
+            hash,
+            confirmations: 1,
+          });
+
+          toast.success(
+            <div className="flex flex-col gap-2">
+              <p>Donation successful!</p>
+              <a
+                href={explorerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-blue-500 hover:text-blue-600 underline"
+              >
+                View on Explorer
+              </a>
+            </div>,
+            { id: toastId }
+          );
+
+          setOpen(false);
+          setAmount("");
+
+          // Reload cause data
+          await queryClient.invalidateQueries({
+            queryKey: ["cause", cause.causeId],
+          });
+        } catch (error) {
+          toast.error("Failed to process donation", { id: toastId });
+        }
+      },
+      onError: (error, _, toastId) => {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to process donation",
+          { id: toastId }
+        );
+      },
     },
   });
 
@@ -69,19 +115,13 @@ export function DonateCauseDialog({ cause, children }: DonateCauseDialogProps) {
         args: [`0x${cause.causeId}`],
         value: parseEther(amount),
       });
-
-      toast.success("Donation successful!");
-      setOpen(false);
-      setAmount("");
     } catch (error) {
       console.error("Error donating:", error);
-      const message =
-        error instanceof Error ? error.message : "Error processing donation";
-      toast.error(message);
+      toast.error(
+        error instanceof Error ? error.message : "Error processing donation"
+      );
     }
   };
-
-  const isLoading = isPending || isConfirming;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -113,11 +153,8 @@ export function DonateCauseDialog({ cause, children }: DonateCauseDialogProps) {
           </div>
         </div>
         <DialogFooter>
-          <Button
-            onClick={handleDonate}
-            disabled={isLoading || !amount || !writeContract}
-          >
-            {isLoading ? "Processing..." : "Donate"}
+          <Button onClick={handleDonate} disabled={!isConnected || !amount}>
+            {!isConnected ? "Wallet not connected" : "Donate"}
           </Button>
         </DialogFooter>
       </DialogContent>

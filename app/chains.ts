@@ -1,5 +1,5 @@
 export const taikoHekla = {
-  id: 167009,
+  id: parseInt(process.env.NEXT_PUBLIC_CHAIN_ID ?? "167009"),
   name: "Taiko Hekla",
   network: "taiko-hekla",
   nativeCurrency: {

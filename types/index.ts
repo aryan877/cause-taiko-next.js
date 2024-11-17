@@ -49,6 +49,7 @@ export interface Cause {
   totalDonated?: string;
   totalWithdrawn?: string;
   remainingAmount?: string;
+  isFeatured?: boolean;
 }
 
 // API Response Types

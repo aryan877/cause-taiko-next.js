@@ -1,10 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
-export async function GET(
-  request: Request,
-  { params }: { params: { address: string } }
-) {
+export async function GET(request: Request, props: { params: Promise<{ address: string }> }) {
+  const params = await props.params;
   try {
     const addressBuffer = Buffer.from(params.address.replace("0x", ""), "hex");
 

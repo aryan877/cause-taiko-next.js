@@ -63,6 +63,7 @@ model taiko_hekla_testnet_cause_created {
   transaction_hash Bytes
   gs_chain         String  @map("_gs_chain")
   gs_gid           String  @id @map("_gs_gid")
+  is_featured      Boolean @default(false)
 }
 
 model taiko_hekla_testnet_cause_target_reached {
@@ -204,6 +205,32 @@ model taiko_hekla_testnet_comment_like {
   block            Int
   id               Bytes    @id
   comment_id       Bytes
+  liker            Bytes
+  block_timestamp  Decimal  @db.Decimal
+  transaction_hash Bytes
+  gs_chain         String   @map("_gs_chain")
+  gs_gid           String   @map("_gs_gid")
+}
+
+model taiko_hekla_testnet_beneficiary_update {
+  vid              BigInt
+  block            Int
+  id               Bytes    @id
+  cause_id         Bytes
+  beneficiary      Bytes
+  content          String
+  likes_count      Int      @default(0)
+  block_timestamp  Decimal  @db.Decimal
+  transaction_hash Bytes
+  gs_chain         String   @map("_gs_chain")
+  gs_gid           String   @map("_gs_gid")
+}
+
+model taiko_hekla_testnet_beneficiary_update_like {
+  vid              BigInt
+  block            Int
+  id               Bytes    @id
+  update_id        Bytes
   liker            Bytes
   block_timestamp  Decimal  @db.Decimal
   transaction_hash Bytes

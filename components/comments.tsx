@@ -143,7 +143,7 @@ export function Comments({ causeId }: { causeId: string }) {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-xl font-semibold">Comments</h2>
         <Select
           value={sortBy}
@@ -236,19 +236,19 @@ function CommentItem({
 
   return (
     <div className="space-y-4">
-      <div className="flex space-x-4">
-        <Avatar>
+      <div className="flex flex-col sm:flex-row gap-4">
+        <Avatar className="w-8 h-8 sm:w-10 sm:h-10">
           <AvatarFallback>
             {comment.author.slice(2, 4).toUpperCase()}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center space-x-2">
-              <span className="font-medium">
+              <span className="font-medium text-sm sm:text-base">
                 {comment.author.slice(0, 6)}...{comment.author.slice(-4)}
               </span>
-              <span className="text-sm text-gray-500">
+              <span className="text-xs sm:text-sm text-gray-500">
                 {dayjs.unix(comment.timestamp).fromNow()}
               </span>
             </div>
@@ -302,21 +302,21 @@ function CommentItem({
       </Dialog>
 
       {comment.replies && comment.replies.length > 0 && (
-        <div className="ml-12 space-y-4">
+        <div className="ml-4 sm:ml-12 space-y-4">
           {comment.replies.map((reply) => (
-            <div key={reply.id} className="flex space-x-4">
-              <Avatar>
+            <div key={reply.id} className="flex flex-col sm:flex-row gap-4">
+              <Avatar className="w-8 h-8 sm:w-10 sm:h-10">
                 <AvatarFallback>
                   {reply.author.slice(2, 4).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 space-y-2">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="flex items-center space-x-2">
-                    <span className="font-medium">
+                    <span className="font-medium text-sm sm:text-base">
                       {reply.author.slice(0, 6)}...{reply.author.slice(-4)}
                     </span>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-xs sm:text-sm text-gray-500">
                       {dayjs.unix(reply.timestamp).fromNow()}
                     </span>
                   </div>

@@ -23,6 +23,8 @@ import {
   ChevronDown,
   ChevronUp,
   Share2,
+  LineChart as ChartIcon,
+  RefreshCw,
 } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
@@ -36,6 +38,10 @@ import {
 import { LineChart } from "echarts/charts";
 import { UniversalTransition } from "echarts/features";
 import { CanvasRenderer } from "echarts/renderers";
+import { Updates } from "./updates";
+import { useQueryClient } from "@tanstack/react-query";
+import { waitForTransactionReceipt } from "@wagmi/core";
+import { config } from "@/lib/utils";
 
 dayjs.extend(relativeTime);
 
@@ -49,10 +55,66 @@ echarts.use([
 ]);
 
 export function CauseDetails({ cause }: CauseDetailsProps) {
-  const { address } = useAccount();
-  const { writeContract, data: hash, isPending } = useWriteContract();
-  const { isLoading: isConfirming } = useWaitForTransactionReceipt({
-    hash,
+  const { address, isConnected } = useAccount();
+  const queryClient = useQueryClient();
+
+  const { writeContract } = useWriteContract({
+    mutation: {
+      onMutate: () => {
+        return toast.loading("Initiating withdrawal...");
+      },
+      onSuccess: async (hash, _, toastId) => {
+        const explorerUrl = `https://hekla.taikoscan.io/tx/${hash}`;
+        toast.loading(
+          <div className="flex flex-col gap-2">
+            <p>Waiting for confirmation...</p>
+            <a
+              href={explorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-blue-500 hover:text-blue-600 underline"
+            >
+              View on Explorer
+            </a>
+          </div>,
+          { id: toastId }
+        );
+
+        try {
+          await waitForTransactionReceipt(config, {
+            hash,
+            confirmations: 1,
+          });
+
+          toast.success(
+            <div className="flex flex-col gap-2">
+              <p>Funds withdrawn successfully!</p>
+              <a
+                href={explorerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-blue-500 hover:text-blue-600 underline"
+              >
+                View on Explorer
+              </a>
+            </div>,
+            { id: toastId }
+          );
+
+          await queryClient.invalidateQueries({
+            queryKey: ["cause", cause.causeId],
+          });
+        } catch (error) {
+          toast.error("Failed to withdraw funds", { id: toastId });
+        }
+      },
+      onError: (error, _, toastId) => {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to withdraw funds",
+          { id: toastId }
+        );
+      },
+    },
   });
 
   const normalizedAddress = address?.toLowerCase() || "";
@@ -81,17 +143,13 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
         functionName: "withdrawFunds",
         args: [`0x${cause.causeId}`],
       });
-
-      toast.success("Withdrawal initiated!");
     } catch (error) {
       console.error("Error withdrawing:", error);
-      const message =
-        error instanceof Error ? error.message : "Error processing withdrawal";
-      toast.error(message);
+      toast.error(
+        error instanceof Error ? error.message : "Error processing withdrawal"
+      );
     }
   };
-
-  const isLoading = isPending || isConfirming;
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -142,7 +200,99 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
     data.cumulative = runningTotal;
   });
 
+  const handleRefresh = async () => {
+    const toastId = toast.loading("Refreshing cause data...");
+    try {
+      await queryClient.invalidateQueries({
+        queryKey: ["cause", cause.causeId],
+      });
+      toast.success("Data refreshed!", { id: toastId });
+    } catch (error) {
+      toast.error("Failed to refresh data", { id: toastId });
+    }
+  };
+
   const DonationChart = () => {
+    if (cause.donations.length === 0) {
+      return (
+        <div className="space-y-4">
+          <Card className="border-2">
+            <CardContent className="pt-6 px-2 sm:px-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold">Donation History</h3>
+                <Button
+                  variant="outline"
+                  onClick={handleRefresh}
+                  size="sm"
+                  className="gap-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Refresh Data
+                </Button>
+              </div>
+              <div className="h-[300px] w-full flex flex-col items-center justify-center text-muted-foreground">
+                <ChartIcon className="h-12 w-12 mb-4 text-muted-foreground/30" />
+                <p className="text-lg font-medium">No donations yet</p>
+                <p className="text-sm">Be the first one to donate!</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-2">
+            <CardContent className="p-4 sm:p-6 space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-semibold text-lg">
+                    {formatEther(totalRaised)} ETH raised
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    of {formatEther(BigInt(cause.targetAmount))} ETH goal
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-medium">{progress}% complete</p>
+                  <p className="text-sm text-gray-500">
+                    {cause.donationCount} donation
+                    {cause.donationCount !== 1 ? "s" : ""}
+                  </p>
+                </div>
+              </div>
+
+              <Progress value={progress} className="h-2" />
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+                <div className="space-y-1">
+                  <p className="text-sm text-gray-500">Average Donation</p>
+                  <p className="font-medium">
+                    {formatEther(
+                      totalRaised / BigInt(Math.max(cause.donationCount, 1))
+                    )}{" "}
+                    ETH
+                  </p>
+                </div>
+                {hasRemainingFunds && isCreator && (
+                  <div className="space-y-1">
+                    <p className="text-sm text-gray-500">
+                      Available to Withdraw
+                    </p>
+                    <p className="font-medium">
+                      {formatEther(remainingAmount)} ETH
+                    </p>
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <p className="text-sm text-gray-500">Total Withdrawn</p>
+                  <p className="font-medium">
+                    {formatEther(BigInt(cause.totalWithdrawn ?? "0"))} ETH
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
     const option = {
       tooltip: {
         trigger: "axis",
@@ -215,9 +365,20 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
     return (
       <div className="space-y-4">
         <Card className="border-2">
-          <CardContent className="pt-6">
-            <h3 className="font-semibold mb-4">Donation History</h3>
-            <div className="h-[300px]">
+          <CardContent className="pt-6 px-2 sm:px-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold">Donation History</h3>
+              <Button
+                variant="outline"
+                onClick={handleRefresh}
+                size="sm"
+                className="gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh Data
+              </Button>
+            </div>
+            <div className="h-[300px] w-full">
               <ReactEChartsCore
                 echarts={echarts}
                 option={option}
@@ -231,7 +392,7 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
         </Card>
 
         <Card className="border-2">
-          <CardContent className="p-6 space-y-4">
+          <CardContent className="p-4 sm:p-6 space-y-4">
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="font-semibold text-lg">
@@ -318,10 +479,10 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
   });
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <div className="container mx-auto px-4 max-w-6xl">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8">
         {/* Left Column - Main Info */}
-        <div className="md:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-6">
           <div>
             <div className="flex items-center justify-between mb-3">
               <h1 className="text-3xl font-bold">{cause.name}</h1>
@@ -378,6 +539,9 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
             <TabsList className="w-full">
               <TabsTrigger value="donations" className="flex-1">
                 Donations
+              </TabsTrigger>
+              <TabsTrigger value="updates" className="flex-1">
+                Updates
               </TabsTrigger>
               <TabsTrigger value="top-donors" className="flex-1">
                 Top Donors
@@ -465,6 +629,13 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
                   </CardContent>
                 </Card>
               )}
+            </TabsContent>
+
+            <TabsContent value="updates" className="space-y-4">
+              <Updates
+                causeId={cause.causeId}
+                beneficiary={cause.beneficiary}
+              />
             </TabsContent>
 
             <TabsContent value="top-donors" className="space-y-4 mt-4">
@@ -564,7 +735,7 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
                             rel="noopener noreferrer"
                             className="break-all"
                           >
-                            0x{withdrawal.transactionHash}
+                            0x{withdrawal.transactionHash}a
                           </a>
                         </div>
                       </div>
@@ -619,8 +790,8 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
           </Tabs>
         </div>
 
-        <div className="md:col-span-1">
-          <div className="sticky top-4 space-y-4">
+        <div className="lg:col-span-1">
+          <div className="sticky top-20 space-y-4">
             <Card className="border-2">
               <CardContent className="p-6">
                 <div className="space-y-4">
@@ -643,12 +814,10 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
                         variant="outline"
                         size="lg"
                         className="w-full text-lg py-6"
-                        disabled={
-                          isLoading || !writeContract || !hasRemainingFunds
-                        }
+                        disabled={!isConnected || !hasRemainingFunds}
                       >
-                        {isLoading
-                          ? "Processing..."
+                        {!isConnected
+                          ? "Wallet not connected"
                           : hasRemainingFunds
                           ? "Withdraw Funds"
                           : "No funds to withdraw"}

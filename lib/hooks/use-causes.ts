@@ -1,11 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { PaginatedCauses, Cause } from "@/types";
 
-export function useCauses(page: number = 1, limit: number = 9) {
+export function useCauses(page: number, featured?: boolean) {
   return useQuery<PaginatedCauses>({
-    queryKey: ["causes", page, limit],
+    queryKey: ["causes", page, featured],
     queryFn: async () => {
-      const response = await fetch(`/api/causes?page=${page}&limit=${limit}`);
+      const params = new URLSearchParams({
+        page: page.toString(),
+        ...(featured ? { featured: "true" } : {}),
+      });
+
+      const response = await fetch(`/api/causes?${params}`);
       if (!response.ok) throw new Error("Failed to fetch causes");
       return response.json();
     },

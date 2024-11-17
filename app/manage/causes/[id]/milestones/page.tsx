@@ -21,9 +21,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatEther } from "viem";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, RefreshCw } from "lucide-react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import { waitForTransactionReceipt } from "@wagmi/core";
+import { config } from "@/lib/utils";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAccount } from "wagmi";
 
 dayjs.extend(relativeTime);
 
@@ -35,15 +39,75 @@ export default function CreateMilestonePage() {
   const [description, setDescription] = useState("");
   const [targetAmount, setTargetAmount] = useState("");
 
-  const { writeContract, data: hash, isPending } = useWriteContract();
-  const { isLoading: isConfirming } = useWaitForTransactionReceipt({
-    hash,
+  const { writeContract } = useWriteContract({
+    mutation: {
+      onMutate: () => {
+        return toast.loading("Initiating milestone creation...");
+      },
+      onSuccess: async (hash, _, toastId) => {
+        const explorerUrl = `https://hekla.taikoscan.io/tx/${hash}`;
+        toast.loading(
+          <div className="flex flex-col gap-2">
+            <p>Waiting for confirmation...</p>
+            <a
+              href={explorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-blue-500 hover:text-blue-600 underline"
+            >
+              View on Explorer
+            </a>
+          </div>,
+          { id: toastId }
+        );
+
+        try {
+          await waitForTransactionReceipt(config, {
+            hash,
+            confirmations: 1,
+          });
+
+          toast.success(
+            <div className="flex flex-col gap-2">
+              <p>Milestone created successfully!</p>
+              <a
+                href={explorerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-blue-500 hover:text-blue-600 underline"
+              >
+                View on Explorer
+              </a>
+            </div>,
+            { id: toastId }
+          );
+          setDescription("");
+          setTargetAmount("");
+
+          await queryClient.invalidateQueries({
+            queryKey: ["milestones", causeId],
+          });
+        } catch (error) {
+          toast.error("Failed to create milestone", { id: toastId });
+        }
+      },
+      onError: (error, _, toastId) => {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to create milestone",
+          { id: toastId }
+        );
+      },
+    },
   });
 
   const { data: cause } = useCause(causeId);
   const { data: milestonesData, isLoading: loadingMilestones } =
     useMilestones(causeId);
   const milestones = milestonesData?.items || [];
+
+  const queryClient = useQueryClient();
+
+  const { isConnected } = useAccount();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,19 +128,28 @@ export default function CreateMilestonePage() {
         functionName: "addMilestone",
         args: [`0x${causeId}`, description, parseEther(targetAmount)],
       });
-
-      toast.success("Milestone added successfully!");
-      setDescription("");
-      setTargetAmount("");
     } catch (error) {
       console.error("Error adding milestone:", error);
-      const message =
-        error instanceof Error ? error.message : "Error adding milestone";
-      toast.error(message);
+      toast.error(
+        error instanceof Error ? error.message : "Error adding milestone"
+      );
     }
   };
 
-  const isLoading = isPending || isConfirming;
+  const handleRefresh = async () => {
+    const toastId = toast.loading("Refreshing milestones...");
+    try {
+      await queryClient.invalidateQueries({
+        queryKey: ["milestones", causeId],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["cause", causeId],
+      });
+      toast.success("Data refreshed!", { id: toastId });
+    } catch (error) {
+      toast.error("Failed to refresh data", { id: toastId });
+    }
+  };
 
   return (
     <div className="container mx-auto py-8 max-w-5xl">
@@ -143,12 +216,8 @@ export default function CreateMilestonePage() {
                 />
               </div>
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading || !writeContract}
-              >
-                {isLoading ? "Adding Milestone..." : "Add Milestone"}
+              <Button type="submit" className="w-full" disabled={!isConnected}>
+                {isConnected ? "Add Milestone" : "Wallet not connected"}
               </Button>
             </form>
           </CardContent>
@@ -157,7 +226,23 @@ export default function CreateMilestonePage() {
         {/* Existing Milestones */}
         <Card>
           <CardHeader>
-            <CardTitle>Existing Milestones</CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle>Existing Milestones</CardTitle>
+              <Button
+                variant="outline"
+                onClick={handleRefresh}
+                disabled={loadingMilestones}
+                size="sm"
+                className="gap-2"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${
+                    loadingMilestones ? "animate-spin" : ""
+                  }`}
+                />
+                Refresh List
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {loadingMilestones ? (
