@@ -148,18 +148,6 @@ export function CausesList({ showFeaturedOnly = false }: CausesListProps) {
     searchCauses(debouncedSearch);
   }, [debouncedSearch]);
 
-  const getCauseProgress = (donations: { amount: string }[]) => {
-    const total = donations.reduce(
-      (acc, curr) => acc + BigInt(curr.amount),
-      BigInt(0)
-    );
-    return total;
-  };
-
-  const formatTimestamp = (timestamp: number) => {
-    return dayjs.unix(timestamp).fromNow();
-  };
-
   const featuredCauses = data?.items.filter((cause) => cause.isFeatured) || [];
   const regularCauses = data?.items.filter((cause) => !cause.isFeatured) || [];
 
@@ -237,8 +225,8 @@ export function CausesList({ showFeaturedOnly = false }: CausesListProps) {
       <div className="bg-muted/50 border rounded-lg p-6 space-y-3">
         <h3 className="text-lg font-semibold">🌟 Beta Testing Phase</h3>
         <p className="text-muted-foreground">
-          We're currently in beta, and donation causes are being carefully
-          curated. If you'd like to create a fundraising campaign, please
+          We&apos;re currently in beta, and donation causes are being carefully
+          curated. If you&apos;d like to create a fundraising campaign, please
           contact us at{" "}
           <a
             href="mailto:support@transparentdonations.com"

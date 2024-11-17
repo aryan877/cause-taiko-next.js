@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import RichTextEditor from "@/components/rich-text-editor";
 import { parseEther } from "viem";
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useWriteContract } from "wagmi";
 import { contractConfig, config } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -68,7 +68,7 @@ export default function CreateCausePage() {
           setTimeout(() => {
             router.push("/");
           }, 2000);
-        } catch (error) {
+        } catch {
           toast.error("Failed to create cause", { id: toastId });
         }
       },

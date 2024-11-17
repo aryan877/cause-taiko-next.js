@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { formatEther } from "viem";
@@ -9,11 +10,7 @@ import { CauseDetailsProps } from "@/types";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import ReactMarkdown from "react-markdown";
-import {
-  useAccount,
-  useWriteContract,
-  useWaitForTransactionReceipt,
-} from "wagmi";
+import { useAccount, useWriteContract } from "wagmi";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
 import { contractConfig } from "@/lib/utils";
@@ -104,7 +101,7 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
           await queryClient.invalidateQueries({
             queryKey: ["cause", cause.causeId],
           });
-        } catch (error) {
+        } catch {
           toast.error("Failed to withdraw funds", { id: toastId });
         }
       },
@@ -207,7 +204,7 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
         queryKey: ["cause", cause.causeId],
       });
       toast.success("Data refreshed!", { id: toastId });
-    } catch (error) {
+    } catch {
       toast.error("Failed to refresh data", { id: toastId });
     }
   };

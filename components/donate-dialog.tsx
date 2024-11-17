@@ -84,7 +84,7 @@ export function DonateCauseDialog({ cause, children }: DonateCauseDialogProps) {
           await queryClient.invalidateQueries({
             queryKey: ["cause", cause.causeId],
           });
-        } catch (error) {
+        } catch {
           toast.error("Failed to process donation", { id: toastId });
         }
       },

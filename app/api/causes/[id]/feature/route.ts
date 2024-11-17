@@ -16,7 +16,7 @@ export async function POST(
 ) {
   const params = await props.params;
   try {
-    const { signature, message, isFeatured } = await request.json();
+    const { signature, isFeatured } = await request.json();
 
     // Read contract owner directly from the contract
     const contractOwner = (await publicClient.readContract({

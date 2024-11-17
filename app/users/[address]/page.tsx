@@ -37,7 +37,7 @@ export default function UserProfilePage() {
     try {
       await navigator.clipboard.writeText(text);
       toast.success("Copied to clipboard!");
-    } catch (error) {
+    } catch {
       toast.error("Failed to copy to clipboard");
     }
   };
@@ -60,7 +60,7 @@ export default function UserProfilePage() {
       <div className="container mx-auto py-16 text-center">
         <h1 className="text-2xl font-bold mb-4">Profile Not Found</h1>
         <p className="text-gray-500">
-          This address hasn't made any donations yet.
+          This address hasn&apos;t made any donations yet.
         </p>
       </div>
     );
@@ -230,7 +230,7 @@ export default function UserProfilePage() {
                   <div className="text-4xl">🎯</div>
                   <h3 className="text-lg font-semibold">No Donations Yet</h3>
                   <p className="text-sm text-gray-500">
-                    This user hasn't made any donations yet.
+                    This user hasn&apos;t made any donations yet.
                   </p>
                   <Link href="/causes">
                     <Button variant="outline" className="mt-4">

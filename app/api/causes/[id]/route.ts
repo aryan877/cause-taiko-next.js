@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { notFound } from "next/navigation";
@@ -165,21 +167,31 @@ export async function GET(
       timestamp: Number(cause.block_timestamp),
       donationCount: donations.length,
       topDonors,
-      donations: donations.map((d) => ({
-        id: d.id.toString("hex"),
-        amount: d.amount.toString(),
-        donor: d.donor.toString("hex"),
-        timestamp: Number(d.block_timestamp),
-        impactScore: d.impact_score.toString(),
-        transactionHash: d.transaction_hash.toString("hex"),
-      })),
-      withdrawals: withdrawals.map((w) => ({
-        id: w.id.toString("hex"),
-        amount: w.amount.toString(),
-        timestamp: Number(w.block_timestamp),
-        transactionHash: w.transaction_hash.toString("hex"),
-        beneficiary: cause.beneficiary.toString("hex"),
-      })),
+      donations: {
+        items: donations.map((d) => ({
+          id: d.id.toString("hex"),
+          amount: d.amount.toString(),
+          donor: d.donor.toString("hex"),
+          timestamp: Number(d.block_timestamp),
+          impactScore: d.impact_score.toString(),
+          transactionHash: d.transaction_hash.toString("hex"),
+        })),
+        total: donationsCount,
+        page,
+        limit,
+      },
+      withdrawals: {
+        items: withdrawals.map((w) => ({
+          id: w.id.toString("hex"),
+          amount: w.amount.toString(),
+          timestamp: Number(w.block_timestamp),
+          transactionHash: w.transaction_hash.toString("hex"),
+          beneficiary: cause.beneficiary.toString("hex"),
+        })),
+        total: withdrawalsCount,
+        page,
+        limit,
+      },
       milestones: milestones.map((m) => ({
         id: m.id.toString("hex"),
         index: m.milestone_index.toString(),

@@ -221,7 +221,6 @@ function UpdateItem({
   update,
   onDelete,
   onLike,
-  currentUser,
   isBeneficiary,
 }: {
   update: Update;

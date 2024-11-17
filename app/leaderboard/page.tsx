@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
@@ -29,7 +30,7 @@ export default function LeaderboardPage() {
     try {
       await navigator.clipboard.writeText(text);
       toast.success("Copied to clipboard!");
-    } catch (error) {
+    } catch {
       toast.error("Failed to copy to clipboard");
     }
   };

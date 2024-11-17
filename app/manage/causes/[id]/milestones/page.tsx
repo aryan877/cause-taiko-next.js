@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useParams, useRouter } from "next/navigation";
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useWriteContract } from "wagmi";
 import { contractConfig } from "@/lib/utils";
 import { toast } from "sonner";
 import { parseEther } from "viem";
@@ -87,7 +87,7 @@ export default function CreateMilestonePage() {
           await queryClient.invalidateQueries({
             queryKey: ["milestones", causeId],
           });
-        } catch (error) {
+        } catch {
           toast.error("Failed to create milestone", { id: toastId });
         }
       },
@@ -146,7 +146,7 @@ export default function CreateMilestonePage() {
         queryKey: ["cause", causeId],
       });
       toast.success("Data refreshed!", { id: toastId });
-    } catch (error) {
+    } catch {
       toast.error("Failed to refresh data", { id: toastId });
     }
   };
