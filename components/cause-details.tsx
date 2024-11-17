@@ -183,7 +183,7 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
   const MAX_LENGTH = 300;
   const shouldShowReadMore = cause.description.length > MAX_LENGTH;
 
-  const chartData = cause.donations
+  const chartData = (Array.isArray(cause.donations) ? cause.donations : [])
     .sort((a, b) => a.timestamp - b.timestamp)
     .map((donation) => ({
       timestamp: donation.timestamp * 1000,
@@ -210,7 +210,7 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
   };
 
   const DonationChart = () => {
-    if (cause.donations.length === 0) {
+    if (!Array.isArray(cause.donations) || cause.donations.length === 0) {
       return (
         <div className="space-y-4">
           <Card className="border-2">
@@ -242,13 +242,13 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
                   <h3 className="font-semibold text-lg">
                     {formatEther(totalRaised)} ETH raised
                   </h3>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     of {formatEther(BigInt(cause.targetAmount))} ETH goal
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="font-medium">{progress}% complete</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     {cause.donationCount} donation
                     {cause.donationCount !== 1 ? "s" : ""}
                   </p>
@@ -259,7 +259,9 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
                 <div className="space-y-1">
-                  <p className="text-sm text-gray-500">Average Donation</p>
+                  <p className="text-sm text-muted-foreground">
+                    Average Donation
+                  </p>
                   <p className="font-medium">
                     {formatEther(
                       totalRaised / BigInt(Math.max(cause.donationCount, 1))
@@ -269,7 +271,7 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
                 </div>
                 {hasRemainingFunds && isCreator && (
                   <div className="space-y-1">
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       Available to Withdraw
                     </p>
                     <p className="font-medium">
@@ -278,7 +280,9 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
                   </div>
                 )}
                 <div className="space-y-1">
-                  <p className="text-sm text-gray-500">Total Withdrawn</p>
+                  <p className="text-sm text-muted-foreground">
+                    Total Withdrawn
+                  </p>
                   <p className="font-medium">
                     {formatEther(BigInt(cause.totalWithdrawn ?? "0"))} ETH
                   </p>
@@ -444,36 +448,28 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
   const handleShare = async () => {
     try {
       const url = window.location.href;
-
-      if (navigator.share) {
-        await navigator.share({
-          title: cause.name,
-          text: cause.description.slice(0, 100) + "...",
-          url: url,
-        });
-        return;
-      }
-
       await navigator.clipboard.writeText(url);
       toast.success("Link copied to clipboard!", {
         duration: 2000,
         position: "bottom-right",
       });
     } catch (error) {
-      console.error("Error sharing:", error);
-      toast.error("Failed to share", {
+      console.error("Error copying link:", error);
+      toast.error("Failed to copy link", {
         duration: 2000,
         position: "bottom-right",
       });
     }
   };
 
-  const sortedDonations = [...cause.donations].sort((a, b) => {
-    if (donationsSort === "amount") {
-      return BigInt(b.amount) > BigInt(a.amount) ? 1 : -1;
-    }
-    return b.timestamp - a.timestamp;
-  });
+  const sortedDonations = Array.isArray(cause.donations)
+    ? [...cause.donations].sort((a, b) => {
+        if (donationsSort === "amount") {
+          return BigInt(b.amount) > BigInt(a.amount) ? 1 : -1;
+        }
+        return b.timestamp - a.timestamp;
+      })
+    : [];
 
   return (
     <div className="container mx-auto px-4 max-w-6xl">
