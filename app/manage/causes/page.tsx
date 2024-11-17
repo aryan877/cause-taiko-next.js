@@ -98,10 +98,9 @@ export default function ManageCausesPage() {
     causeId: string,
     currentFeatured: boolean
   ) => {
-    try {
-      const action = currentFeatured ? "unfeature" : "feature";
-      toast.loading(`Please sign to ${action} this cause`);
+    const toastId = toast.loading("Please sign to update feature status...");
 
+    try {
       const message = `Feature cause: ${causeId}`;
       const signature = await signMessageAsync({ message });
 
@@ -118,17 +117,20 @@ export default function ManageCausesPage() {
       if (!response.ok) throw new Error("Failed to update feature status");
 
       await queryClient.invalidateQueries({ queryKey: ["causes"] });
+
       toast.success(
         currentFeatured
           ? "Cause removed from featured section"
-          : "Cause featured successfully"
+          : "Cause featured successfully",
+        { id: toastId }
       );
     } catch (error) {
       console.error("Error toggling feature status:", error);
       toast.error(
         error instanceof Error
           ? error.message
-          : "Failed to update feature status"
+          : "Failed to update feature status",
+        { id: toastId }
       );
     }
   };
