@@ -39,6 +39,7 @@ import { Updates } from "./updates";
 import { useQueryClient } from "@tanstack/react-query";
 import { waitForTransactionReceipt } from "@wagmi/core";
 import { config } from "@/lib/utils";
+import { Pagination } from "@/components/ui/pagination";
 
 dayjs.extend(relativeTime);
 
@@ -462,14 +463,8 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
     }
   };
 
-  const sortedDonations = Array.isArray(cause.donations)
-    ? [...cause.donations].sort((a, b) => {
-        if (donationsSort === "amount") {
-          return BigInt(b.amount) > BigInt(a.amount) ? 1 : -1;
-        }
-        return b.timestamp - a.timestamp;
-      })
-    : [];
+  const [donationsPage, setDonationsPage] = useState(1);
+  const [topDonorsPage, setTopDonorsPage] = useState(1);
 
   return (
     <div className="container mx-auto px-4 max-w-6xl">
@@ -533,9 +528,6 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
               <TabsTrigger value="donations" className="flex-1">
                 Donations
               </TabsTrigger>
-              <TabsTrigger value="updates" className="flex-1">
-                Updates
-              </TabsTrigger>
               <TabsTrigger value="top-donors" className="flex-1">
                 Top Donors
               </TabsTrigger>
@@ -561,60 +553,70 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
                 </select>
               </div>
 
-              {sortedDonations.length > 0 ? (
-                sortedDonations.map((donation) => (
-                  <Card key={donation.id}>
-                    <CardContent className="py-4">
-                      <div className="flex flex-col gap-2">
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="font-medium">
-                              {formatEther(BigInt(donation.amount))} ETH
-                            </p>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <p className="text-sm text-gray-500">
-                                  {donation.donor.slice(0, 6)}...
-                                  {donation.donor.slice(-4)}
-                                </p>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    copyToClipboard(donation.donor)
-                                  }
-                                >
-                                  <Copy className="h-4 w-4" />
-                                </Button>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Link href={`/users/${donation.donor}`}>
-                                  <Button variant="outline" size="sm">
-                                    View Profile
+              {cause.paginatedDonations &&
+              cause.paginatedDonations.items.length > 0 ? (
+                <>
+                  {cause.paginatedDonations.items.map((donation) => (
+                    <Card key={donation.id}>
+                      <CardContent className="py-4">
+                        <div className="flex flex-col gap-2">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-medium">
+                                {formatEther(BigInt(donation.amount))} ETH
+                              </p>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm text-gray-500">
+                                    {donation.donor.slice(0, 6)}...
+                                    {donation.donor.slice(-4)}
+                                  </p>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                      copyToClipboard(donation.donor)
+                                    }
+                                  >
+                                    <Copy className="h-4 w-4" />
                                   </Button>
-                                </Link>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Link href={`/users/${donation.donor}`}>
+                                    <Button variant="outline" size="sm">
+                                      View Profile
+                                    </Button>
+                                  </Link>
+                                </div>
                               </div>
                             </div>
+                            <p className="text-sm text-gray-500">
+                              {formatTimestamp(donation.timestamp)}
+                            </p>
                           </div>
-                          <p className="text-sm text-gray-500">
-                            {formatTimestamp(donation.timestamp)}
-                          </p>
+                          <div className="flex items-center gap-2 text-sm text-pink-500 hover:text-pink-600">
+                            <ExternalLink className="h-4 w-4" />
+                            <a
+                              href={getTaikoExplorerUrl(
+                                donation.transactionHash
+                              )}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="break-all"
+                            >
+                              0x{donation.transactionHash}
+                            </a>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-pink-500 hover:text-pink-600">
-                          <ExternalLink className="h-4 w-4" />
-                          <a
-                            href={getTaikoExplorerUrl(donation.transactionHash)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="break-all"
-                          >
-                            0x{donation.transactionHash}
-                          </a>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
+                      </CardContent>
+                    </Card>
+                  ))}
+                  <Pagination
+                    currentPage={donationsPage}
+                    totalPages={cause.paginatedDonations.totalPages}
+                    onPageChange={setDonationsPage}
+                  />
+                </>
               ) : (
                 <Card>
                   <CardContent className="py-8 text-center text-gray-500">
@@ -624,74 +626,75 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
               )}
             </TabsContent>
 
-            <TabsContent value="updates" className="space-y-4">
-              <Updates
-                causeId={cause.causeId}
-                beneficiary={cause.beneficiary}
-              />
-            </TabsContent>
-
             <TabsContent value="top-donors" className="space-y-4 mt-4">
-              {cause.topDonors && cause.topDonors.length > 0 ? (
-                cause.topDonors.map((donor, index) => (
-                  <Card key={donor.address}>
-                    <CardContent className="py-4">
-                      <div className="flex items-center gap-4">
-                        <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-pink-100 dark:bg-pink-900 rounded-full">
-                          <span className="text-lg font-bold text-pink-600 dark:text-pink-300">
-                            #{index + 1}
-                          </span>
-                        </div>
-                        <div className="flex-grow">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-lg">
-                              {formatEther(BigInt(donor.totalDonated))} ETH
-                            </span>
-                            <span className="text-sm text-gray-500">
-                              ({donor.donationCount} donation
-                              {donor.donationCount !== 1 ? "s" : ""})
+              {cause.paginatedTopDonors &&
+              cause.paginatedTopDonors.items.length > 0 ? (
+                <>
+                  {cause.paginatedTopDonors.items.map((donor, index) => (
+                    <Card key={donor.address}>
+                      <CardContent className="py-4">
+                        <div className="flex items-center gap-4">
+                          <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center bg-pink-100 dark:bg-pink-900 rounded-full">
+                            <span className="text-lg font-bold text-pink-600 dark:text-pink-300">
+                              #{index + 1}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-600">
-                              {donor.address.slice(0, 6)}...
-                              {donor.address.slice(-4)}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onClick={() =>
-                                copyToClipboard(`0x${donor.address}`)
-                              }
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                            <a
-                              href={getTaikoExplorerUrl(
-                                donor.address,
-                                "address"
-                              )}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-1 text-sm text-pink-500 hover:text-pink-600"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                              View on Explorer
-                            </a>
+                          <div className="flex-grow">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium text-lg">
+                                {formatEther(BigInt(donor.totalDonated))} ETH
+                              </span>
+                              <span className="text-sm text-gray-500">
+                                ({donor.donationCount} donation
+                                {donor.donationCount !== 1 ? "s" : ""})
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-gray-600">
+                                {donor.address.slice(0, 6)}...
+                                {donor.address.slice(-4)}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() =>
+                                  copyToClipboard(`0x${donor.address}`)
+                                }
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                              <a
+                                href={getTaikoExplorerUrl(
+                                  donor.address,
+                                  "address"
+                                )}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-sm text-pink-500 hover:text-pink-600"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                View on Explorer
+                              </a>
+                            </div>
+                          </div>
+                          <div className="flex-shrink-0">
+                            {index === 0 && (
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                                👑 Top Donor
+                              </span>
+                            )}
                           </div>
                         </div>
-                        <div className="flex-shrink-0">
-                          {index === 0 && (
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-                              👑 Top Donor
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
+                      </CardContent>
+                    </Card>
+                  ))}
+                  <Pagination
+                    currentPage={topDonorsPage}
+                    totalPages={cause.paginatedTopDonors.totalPages}
+                    onPageChange={setTopDonorsPage}
+                  />
+                </>
               ) : (
                 <Card>
                   <CardContent className="py-8 text-center text-gray-500">

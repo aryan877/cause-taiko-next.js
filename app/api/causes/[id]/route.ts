@@ -116,30 +116,37 @@ export async function GET(
       }),
     ]);
 
-    const topDonors = donations
-      .reduce((acc: { donor: string; total: bigint }[], donation) => {
-        const donorIndex = acc.findIndex(
-          (d) => d.donor === donation.donor.toString("hex")
-        );
-        const amount = BigInt(donation.amount.toString());
+    // Get all donations for calculating totals and top donors
+    const allDonations =
+      await prisma.taiko_hekla_testnet_donation_received.findMany({
+        where: {
+          cause_id: cause.cause_id,
+        },
+      });
 
-        if (donorIndex === -1) {
-          acc.push({ donor: donation.donor.toString("hex"), total: amount });
-        } else {
-          acc[donorIndex].total += amount;
-        }
+    // Calculate top donors with pagination
+    const donorMap = new Map<string, { total: bigint; count: number }>();
+    allDonations.forEach((donation) => {
+      const donorKey = donation.donor.toString("hex");
+      const current = donorMap.get(donorKey) || { total: BigInt(0), count: 0 };
+      donorMap.set(donorKey, {
+        total: current.total + BigInt(donation.amount.toString()),
+        count: current.count + 1,
+      });
+    });
 
-        return acc;
-      }, [])
-      .sort((a, b) => (b.total > a.total ? 1 : -1))
-      .slice(0, 5)
-      .map((donor) => ({
-        address: donor.donor,
-        totalDonated: donor.total.toString(),
-        donationCount: donations.filter(
-          (d) => d.donor.toString("hex") === donor.donor
-        ).length,
-      }));
+    const sortedDonors = Array.from(donorMap.entries())
+      .map(([donor, stats]) => ({
+        address: donor,
+        totalDonated: stats.total.toString(),
+        donationCount: stats.count,
+      }))
+      .sort((a, b) =>
+        BigInt(b.totalDonated) > BigInt(a.totalDonated) ? 1 : -1
+      );
+
+    const paginatedDonors = sortedDonors.slice(skip, skip + limit);
+    const totalDonors = sortedDonors.length;
 
     // Calculate remaining withdrawable amount
     const totalDonated = donations.reduce(
@@ -165,9 +172,16 @@ export async function GET(
       beneficiary: cause.beneficiary.toString("hex"),
       createdAt: Number(cause.block_timestamp),
       timestamp: Number(cause.block_timestamp),
-      donationCount: donations.length,
-      topDonors,
-      donations: {
+      donationCount: donationsCount,
+      donations: allDonations.map((d) => ({
+        id: d.id.toString("hex"),
+        amount: d.amount.toString(),
+        donor: d.donor.toString("hex"),
+        timestamp: Number(d.block_timestamp),
+        impactScore: d.impact_score.toString(),
+        transactionHash: d.transaction_hash.toString("hex"),
+      })),
+      paginatedDonations: {
         items: donations.map((d) => ({
           id: d.id.toString("hex"),
           amount: d.amount.toString(),
@@ -179,6 +193,14 @@ export async function GET(
         total: donationsCount,
         page,
         limit,
+        totalPages: Math.ceil(donationsCount / limit),
+      },
+      paginatedTopDonors: {
+        items: paginatedDonors,
+        total: totalDonors,
+        page,
+        limit,
+        totalPages: Math.ceil(totalDonors / limit),
       },
       withdrawals: {
         items: withdrawals.map((w) => ({

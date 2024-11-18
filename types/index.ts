@@ -32,6 +32,14 @@ export interface Milestone {
   index: string;
 }
 
+interface PaginatedData<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export interface Cause {
   id: string;
   causeId: string;
@@ -45,7 +53,8 @@ export interface Cause {
   donations: Donation[];
   withdrawals: Withdrawal[];
   milestones: Milestone[];
-  topDonors?: TopDonor[];
+  paginatedDonations?: PaginatedData<Donation>;
+  paginatedTopDonors?: PaginatedData<TopDonor>;
   totalDonated?: string;
   totalWithdrawn?: string;
   remainingAmount?: string;
