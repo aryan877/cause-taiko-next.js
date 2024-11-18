@@ -69,50 +69,45 @@ export async function GET(
       return notFound();
     }
 
-    const [
-      donations,
-      withdrawals,
-      milestones,
-      donationsCount,
-      withdrawalsCount,
-    ] = await Promise.all([
-      prisma.taiko_hekla_testnet_donation_received.findMany({
-        where: {
-          cause_id: cause.cause_id,
-        },
-        orderBy: {
-          block_timestamp: "desc",
-        },
-        take: limit,
-        skip: skip,
-      }),
-      prisma.taiko_hekla_testnet_funds_withdrawn.findMany({
-        where: {
-          cause_id: cause.cause_id,
-        },
-        orderBy: {
-          block_timestamp: "desc",
-        },
-      }),
-      prisma.taiko_hekla_testnet_milestone_completed.findMany({
-        where: {
-          cause_id: cause.cause_id,
-        },
-        orderBy: {
-          block_timestamp: "desc",
-        },
-      }),
-      prisma.taiko_hekla_testnet_donation_received.count({
-        where: {
-          cause_id: cause.cause_id,
-        },
-      }),
-      prisma.taiko_hekla_testnet_funds_withdrawn.count({
-        where: {
-          cause_id: cause.cause_id,
-        },
-      }),
-    ]);
+    const [donations, withdrawals, milestones, donationsCount] =
+      await Promise.all([
+        prisma.taiko_hekla_testnet_donation_received.findMany({
+          where: {
+            cause_id: cause.cause_id,
+          },
+          orderBy: {
+            block_timestamp: "desc",
+          },
+          take: limit,
+          skip: skip,
+        }),
+        prisma.taiko_hekla_testnet_funds_withdrawn.findMany({
+          where: {
+            cause_id: cause.cause_id,
+          },
+          orderBy: {
+            block_timestamp: "desc",
+          },
+        }),
+        prisma.taiko_hekla_testnet_milestone_completed.findMany({
+          where: {
+            cause_id: cause.cause_id,
+          },
+          orderBy: {
+            block_timestamp: "desc",
+          },
+        }),
+        prisma.taiko_hekla_testnet_donation_received.count({
+          where: {
+            cause_id: cause.cause_id,
+          },
+        }),
+        prisma.taiko_hekla_testnet_funds_withdrawn.count({
+          where: {
+            cause_id: cause.cause_id,
+          },
+        }),
+      ]);
 
     // Get all donations for calculating totals and top donors
     const allDonations =
