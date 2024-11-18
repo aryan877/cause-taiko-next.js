@@ -93,8 +93,6 @@ export async function GET(
         orderBy: {
           block_timestamp: "desc",
         },
-        take: limit,
-        skip: skip,
       }),
       prisma.taiko_hekla_testnet_milestone_completed.findMany({
         where: {
@@ -202,18 +200,14 @@ export async function GET(
         limit,
         totalPages: Math.ceil(totalDonors / limit),
       },
-      withdrawals: {
-        items: withdrawals.map((w) => ({
-          id: w.id.toString("hex"),
-          amount: w.amount.toString(),
-          timestamp: Number(w.block_timestamp),
-          transactionHash: w.transaction_hash.toString("hex"),
-          beneficiary: cause.beneficiary.toString("hex"),
-        })),
-        total: withdrawalsCount,
-        page,
-        limit,
-      },
+      withdrawals: withdrawals.map((w) => ({
+        id: w.id.toString("hex"),
+        amount: w.amount.toString(),
+        timestamp: Number(w.block_timestamp),
+        transactionHash: w.transaction_hash.toString("hex"),
+        beneficiary: w.beneficiary.toString("hex"),
+        causeId: w.cause_id.toString("hex"),
+      })),
       milestones: milestones.map((m) => ({
         id: m.id.toString("hex"),
         index: m.milestone_index.toString(),

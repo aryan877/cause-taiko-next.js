@@ -465,6 +465,8 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
   const [donationsPage, setDonationsPage] = useState(1);
   const [topDonorsPage, setTopDonorsPage] = useState(1);
 
+  console.log(cause.withdrawals);
+
   return (
     <div className="container mx-auto px-4 max-w-6xl">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-8">
@@ -704,7 +706,7 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
             </TabsContent>
 
             <TabsContent value="withdrawals" className="space-y-4">
-              {cause.withdrawals?.length > 0 ? (
+              {cause.withdrawals && cause.withdrawals.length > 0 ? (
                 cause.withdrawals.map((withdrawal) => (
                   <Card key={withdrawal.id}>
                     <CardContent className="py-4">
@@ -715,8 +717,23 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
                               {formatEther(BigInt(withdrawal.amount))} ETH
                               withdrawn
                             </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm text-muted-foreground">
+                                by {withdrawal.beneficiary.slice(0, 6)}...
+                                {withdrawal.beneficiary.slice(-4)}
+                              </p>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  copyToClipboard(withdrawal.beneficiary)
+                                }
+                              >
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm text-muted-foreground">
                             {formatTimestamp(withdrawal.timestamp)}
                           </p>
                         </div>
@@ -730,7 +747,7 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
                             rel="noopener noreferrer"
                             className="break-all"
                           >
-                            0x{withdrawal.transactionHash}a
+                            0x{withdrawal.transactionHash}
                           </a>
                         </div>
                       </div>
@@ -739,7 +756,7 @@ export function CauseDetails({ cause }: CauseDetailsProps) {
                 ))
               ) : (
                 <Card>
-                  <CardContent className="py-8 text-center text-gray-500">
+                  <CardContent className="py-8 text-center text-muted-foreground">
                     No withdrawals made yet
                   </CardContent>
                 </Card>
